@@ -3,6 +3,7 @@ import {
   createAnalysisService,
   getUserAnalysesService,
   getUserAnalysisByIdService,
+  startAnalysisExecutionService,
 } from '../services/analysis.service';
 import {
   createAnalysisSchema,
@@ -81,6 +82,34 @@ export const getAnalysisById = async (
     }
 
     const analysis = await getUserAnalysisByIdService(req.user.id, parseResult.data.id);
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        analysis,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const runAnalysis = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      return next(new AppError('Unauthorized', 401));
+    }
+
+    const parseResult = analysisIdParamSchema.safeParse(req.params);
+    if (!parseResult.success) {
+      return next(new AppError('Invalid analysis ID format', 400));
+    }
+
+    const analysis = await startAnalysisExecutionService(req.user.id, parseResult.data.id);
 
     res.status(200).json({
       status: 'success',

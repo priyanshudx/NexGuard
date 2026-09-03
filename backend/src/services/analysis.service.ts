@@ -138,6 +138,83 @@ export const getUserAnalysisByIdService = async (
   return mapAnalysisRow(data);
 };
 
+// Atomically starts analysis processing & triggers background ML execution
+export const startAnalysisExecutionService = async (
+  userId: string,
+  analysisId: string
+): Promise<AnalysisResponse> => {
+  // 1. Fetch analysis & verify ownership
+  const { data: analysis, error: fetchErr } = await supabase
+    .from('analyses')
+    .select('*')
+    .eq('id', analysisId)
+    .single();
+
+  if (fetchErr || !analysis || analysis.user_id !== userId) {
+    throw new AppError('Analysis not found', 404);
+  }
+
+  const currentStatus = analysis.status ? analysis.status.toUpperCase() : ANALYSIS_STATUS.PENDING;
+  if (currentStatus !== ANALYSIS_STATUS.PENDING) {
+    throw new AppError(
+      `Cannot run analysis in '${currentStatus}' status. Only PENDING analyses can be executed.`,
+      400
+    );
+  }
+
+  // 2. Atomic state transition: PENDING -> PROCESSING
+  const now = new Date().toISOString();
+  const updatePayload: any = { status: ANALYSIS_STATUS.PROCESSING, updated_at: now };
+
+  let { data: updatedRecord, error: updateErr } = await supabase
+    .from('analyses')
+    .update(updatePayload)
+    .eq('id', analysisId)
+    .eq('user_id', userId)
+    .eq('status', analysis.status)
+    .select()
+    .single();
+
+  if (updateErr && updateErr.message.includes('schema cache')) {
+    delete updatePayload.updated_at;
+    const { data: fbData, error: fbErr } = await supabase
+      .from('analyses')
+      .update(updatePayload)
+      .eq('id', analysisId)
+      .eq('user_id', userId)
+      .eq('status', analysis.status)
+      .select()
+      .single();
+
+    updatedRecord = fbData;
+    updateErr = fbErr;
+  }
+
+  if (updateErr || !updatedRecord) {
+    throw new AppError('Analysis processing has already been started by another request', 409);
+  }
+
+  logger.info(`[Analysis Worker] Analysis ${analysisId} status atomically updated to PROCESSING`);
+
+  // 3. Trigger unawaited background worker task
+  setImmediate(async () => {
+    try {
+      logger.info(`[Background Worker] Starting background execution for analysis ${analysisId}`);
+      await executeAnalysisPipeline(userId, analysisId);
+      logger.info(`[Background Worker] Successfully completed background execution for analysis ${analysisId}`);
+    } catch (err: any) {
+      logger.error(`[Background Worker] Execution failed for analysis ${analysisId}: ${err.message || err}`);
+      try {
+        await markAnalysisFailed(analysisId);
+      } catch (failedErr) {
+        logger.error(`[Background Worker] Failed to update status to FAILED for analysis ${analysisId}:`, failedErr);
+      }
+    }
+  });
+
+  return mapAnalysisRow(updatedRecord);
+};
+
 // Orchestration helper: Executes ML pipeline integration for an analysis
 export const executeAnalysisPipeline = async (
   userId: string,
@@ -163,10 +240,10 @@ export const executeAnalysisPipeline = async (
     throw new AppError('Associated dataset not found', 404);
   }
 
-  await markAnalysisProcessing(analysisId);
-
   try {
     const horizon = analysis.horizon !== undefined && analysis.horizon !== null ? Number(analysis.horizon) : (analysis.config?.horizon || 5);
+    
+    logger.info(`[Analysis Pipeline] Sending ML prediction request for analysis ${analysisId}`);
     const mlResult = await sendPredictRequest({
       analysis_id: analysis.id,
       dataset_reference: dataset.file_path,
@@ -196,6 +273,7 @@ export const executeAnalysisPipeline = async (
       });
     }
 
+    logger.info(`[Analysis Pipeline] Persisted ML results into database for analysis ${analysisId}`);
     const completedRecord = await markAnalysisCompleted(analysisId);
     return mapAnalysisRow(completedRecord);
   } catch (err: any) {
@@ -205,7 +283,7 @@ export const executeAnalysisPipeline = async (
   }
 };
 
-// Helper status update functions for external ML pipeline integration
+// Helper status update functions
 export const markAnalysisProcessing = async (analysisId: string) => {
   const now = new Date().toISOString();
   const updatePayload: any = { status: ANALYSIS_STATUS.PROCESSING, updated_at: now };

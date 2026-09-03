@@ -3,6 +3,7 @@ import {
   createAnalysis,
   getAnalyses,
   getAnalysisById,
+  runAnalysis,
 } from '../controllers/analysis.controller';
 import { authenticate } from '../middleware/auth.middleware';
 
@@ -14,5 +15,6 @@ router.use(authenticate);
 router.post('/', createAnalysis);
 router.get('/', getAnalyses);
 router.get('/:id', getAnalysisById);
+router.post('/:id/run', runAnalysis);
 
 export default router;
