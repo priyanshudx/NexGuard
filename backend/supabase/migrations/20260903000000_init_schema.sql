@@ -31,11 +31,13 @@ CREATE TABLE IF NOT EXISTS public.datasets (
 CREATE TABLE IF NOT EXISTS public.analyses (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     dataset_id UUID REFERENCES public.datasets(id) ON DELETE CASCADE NOT NULL,
-    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-    status TEXT NOT NULL DEFAULT 'pending',
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    status TEXT NOT NULL DEFAULT 'PENDING',
+    horizon INTEGER NOT NULL DEFAULT 5,
     target_column TEXT,
     config JSONB DEFAULT '{}'::jsonb NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     completed_at TIMESTAMPTZ
 );
 
