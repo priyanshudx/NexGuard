@@ -25,7 +25,7 @@ const fileFilter = (
   if (isCsvExt && isCsvMime) {
     cb(null, true);
   } else {
-    cb(new AppError('Unsupported file format. Only CSV datasets are currently supported.', 400));
+    cb(new AppError('Unsupported file format. Only CSV datasets are currently supported.', 400, 'VALIDATION_ERROR'));
   }
 };
 
@@ -45,11 +45,12 @@ export const uploadDatasetFile = (req: Request, res: Response, next: NextFunctio
           return next(
             new AppError(
               `File size exceeds maximum allowed limit of ${Math.round(env.MAX_FILE_SIZE_BYTES / (1024 * 1024))}MB.`,
-              400
+              400,
+              'VALIDATION_ERROR'
             )
           );
         }
-        return next(new AppError(`File upload error: ${err.message}`, 400));
+        return next(new AppError(`File upload error: ${err.message}`, 400, 'VALIDATION_ERROR'));
       }
       return next(err);
     }
