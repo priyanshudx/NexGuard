@@ -14,18 +14,17 @@ export const uploadDataset = async (
 ): Promise<void> => {
   try {
     if (!req.user) {
-      return next(new AppError('Unauthorized', 401));
+      return next(new AppError('Unauthorized', 401, 'UNAUTHORIZED'));
     }
 
     if (!req.file) {
-      return next(new AppError('No dataset file provided', 400));
+      return next(new AppError('No dataset file provided', 400, 'VALIDATION_ERROR'));
     }
 
-    const result = await uploadDatasetService(req.user.id, req.file);
+    const dataset = await uploadDatasetService(req.user.id, req.file);
 
     res.status(201).json({
-      status: 'success',
-      data: result,
+      data: dataset,
     });
   } catch (error) {
     next(error);
@@ -39,16 +38,13 @@ export const getDatasets = async (
 ): Promise<void> => {
   try {
     if (!req.user) {
-      return next(new AppError('Unauthorized', 401));
+      return next(new AppError('Unauthorized', 401, 'UNAUTHORIZED'));
     }
 
     const datasets = await getUserDatasetsService(req.user.id);
 
     res.status(200).json({
-      status: 'success',
-      data: {
-        datasets,
-      },
+      data: datasets,
     });
   } catch (error) {
     next(error);
@@ -62,21 +58,18 @@ export const getDatasetById = async (
 ): Promise<void> => {
   try {
     if (!req.user) {
-      return next(new AppError('Unauthorized', 401));
+      return next(new AppError('Unauthorized', 401, 'UNAUTHORIZED'));
     }
 
     const parseResult = datasetIdParamSchema.safeParse(req.params);
     if (!parseResult.success) {
-      return next(new AppError('Invalid dataset ID format', 400));
+      return next(new AppError('Invalid dataset ID format', 400, 'VALIDATION_ERROR'));
     }
 
     const dataset = await getUserDatasetByIdService(req.user.id, parseResult.data.id);
 
     res.status(200).json({
-      status: 'success',
-      data: {
-        dataset,
-      },
+      data: dataset,
     });
   } catch (error) {
     next(error);

@@ -14,7 +14,6 @@ export const getMe = async (
 
     const userInfo = getAuthenticatedUserInfo(req.user);
     res.status(200).json({
-      status: 'success',
       data: {
         user: userInfo,
       },

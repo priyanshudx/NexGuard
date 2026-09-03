@@ -19,22 +19,19 @@ export const createAnalysis = async (
 ): Promise<void> => {
   try {
     if (!req.user) {
-      return next(new AppError('Unauthorized', 401));
+      return next(new AppError('Unauthorized', 401, 'UNAUTHORIZED'));
     }
 
     const parseResult = createAnalysisSchema.safeParse(req.body);
     if (!parseResult.success) {
       const issue = parseResult.error.issues[0];
-      return next(new AppError(issue?.message || 'Invalid request body', 400));
+      return next(new AppError(issue?.message || 'Invalid request body', 400, 'VALIDATION_ERROR'));
     }
 
     const analysis = await createAnalysisService(req.user.id, parseResult.data);
 
     res.status(201).json({
-      status: 'success',
-      data: {
-        analysis,
-      },
+      data: analysis,
     });
   } catch (error) {
     next(error);
@@ -48,7 +45,7 @@ export const getAnalyses = async (
 ): Promise<void> => {
   try {
     if (!req.user) {
-      return next(new AppError('Unauthorized', 401));
+      return next(new AppError('Unauthorized', 401, 'UNAUTHORIZED'));
     }
 
     const queryResult = getAnalysesQuerySchema.safeParse(req.query);
@@ -58,8 +55,8 @@ export const getAnalyses = async (
     const result = await getUserAnalysesService(req.user.id, page, limit);
 
     res.status(200).json({
-      status: 'success',
-      data: result,
+      data: result.analyses,
+      pagination: result.pagination,
     });
   } catch (error) {
     next(error);
@@ -73,21 +70,18 @@ export const getAnalysisById = async (
 ): Promise<void> => {
   try {
     if (!req.user) {
-      return next(new AppError('Unauthorized', 401));
+      return next(new AppError('Unauthorized', 401, 'UNAUTHORIZED'));
     }
 
     const parseResult = analysisIdParamSchema.safeParse(req.params);
     if (!parseResult.success) {
-      return next(new AppError('Invalid analysis ID format', 400));
+      return next(new AppError('Invalid analysis ID format', 400, 'VALIDATION_ERROR'));
     }
 
     const analysis = await getUserAnalysisByIdService(req.user.id, parseResult.data.id);
 
     res.status(200).json({
-      status: 'success',
-      data: {
-        analysis,
-      },
+      data: analysis,
     });
   } catch (error) {
     next(error);
@@ -101,21 +95,18 @@ export const runAnalysis = async (
 ): Promise<void> => {
   try {
     if (!req.user) {
-      return next(new AppError('Unauthorized', 401));
+      return next(new AppError('Unauthorized', 401, 'UNAUTHORIZED'));
     }
 
     const parseResult = analysisIdParamSchema.safeParse(req.params);
     if (!parseResult.success) {
-      return next(new AppError('Invalid analysis ID format', 400));
+      return next(new AppError('Invalid analysis ID format', 400, 'VALIDATION_ERROR'));
     }
 
     const analysis = await startAnalysisExecutionService(req.user.id, parseResult.data.id);
 
     res.status(200).json({
-      status: 'success',
-      data: {
-        analysis,
-      },
+      data: analysis,
     });
   } catch (error) {
     next(error);
