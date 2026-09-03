@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: builder
+    container_name: nexguard-backend-dev
+    command: npm run dev
+    volumes:
+      - ./backend/src:/app/src
+    ports:
+      - "5001:5001"
+    environment:
+      NODE_ENV: development
+      PORT: 5001
+      FRONTEND_URL: http://localhost:3000
+      CORS_ORIGIN: http://localhost:3000
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      SUPABASE_STORAGE_BUCKET: datasets
+      MAX_FILE_SIZE_BYTES: 52428800
+      ML_SERVICE_URL: ${ML_SERVICE_URL:-http://localhost:8000}
+      ML_SERVICE_TIMEOUT_MS: 10000

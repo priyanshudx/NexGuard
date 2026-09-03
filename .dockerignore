@@ -1,0 +1,12 @@
+**/node_modules
+**/dist
+**/.next
+**/.env
+**/.env.local
+**/.env.development
+**/.env.production
+**/.DS_Store
+**/.git
+**/.gitignore
+**/coverage
+**/scratch
