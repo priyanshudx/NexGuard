@@ -11,6 +11,8 @@ const envSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().default('placeholder-service-role-key'),
   SUPABASE_STORAGE_BUCKET: z.string().default('datasets'),
   MAX_FILE_SIZE_BYTES: z.string().transform((val) => parseInt(val, 10)).default('52428800'), // 50MB
+  ML_SERVICE_URL: z.string().default('http://localhost:8000'),
+  ML_SERVICE_TIMEOUT_MS: z.string().transform((val) => parseInt(val, 10)).default('10000'), // 10s timeout
 });
 
 const parsedEnv = envSchema.safeParse(process.env);
