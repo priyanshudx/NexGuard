@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { logger } from '../lib/logger';
 import { AppError } from '../middleware/errorHandler';
 import { ANALYSIS_STATUS, CreateAnalysisInput } from '../schemas/analysis.schema';
+import { sendPredictRequest } from '../lib/ml-client';
 
 export interface AnalysisResponse {
   id: string;
@@ -137,7 +138,74 @@ export const getUserAnalysisByIdService = async (
   return mapAnalysisRow(data);
 };
 
-// Helper status update functions for future ML pipeline integration
+// Orchestration helper: Executes ML pipeline integration for an analysis
+export const executeAnalysisPipeline = async (
+  userId: string,
+  analysisId: string
+): Promise<AnalysisResponse> => {
+  const { data: analysis, error: analysisErr } = await supabase
+    .from('analyses')
+    .select('*')
+    .eq('id', analysisId)
+    .single();
+
+  if (analysisErr || !analysis || analysis.user_id !== userId) {
+    throw new AppError('Analysis not found', 404);
+  }
+
+  const { data: dataset, error: dsErr } = await supabase
+    .from('datasets')
+    .select('id, file_path')
+    .eq('id', analysis.dataset_id)
+    .single();
+
+  if (dsErr || !dataset) {
+    throw new AppError('Associated dataset not found', 404);
+  }
+
+  await markAnalysisProcessing(analysisId);
+
+  try {
+    const horizon = analysis.horizon !== undefined && analysis.horizon !== null ? Number(analysis.horizon) : (analysis.config?.horizon || 5);
+    const mlResult = await sendPredictRequest({
+      analysis_id: analysis.id,
+      dataset_reference: dataset.file_path,
+      horizon: horizon,
+    });
+
+    if (mlResult.forecast && mlResult.forecast.length > 0) {
+      const stepsToInsert = mlResult.forecast.map((step) => ({
+        id: crypto.randomUUID(),
+        analysis_id: analysisId,
+        step_number: step.step_number,
+        timestamp: step.timestamp || null,
+        forecast_value: step.forecast_value,
+        lower_bound: step.lower_bound || null,
+        upper_bound: step.upper_bound || null,
+      }));
+      await supabase.from('forecast_steps').insert(stepsToInsert);
+    }
+
+    if (mlResult.explanation || mlResult.predicted_stage) {
+      await supabase.from('explanations').insert({
+        id: crypto.randomUUID(),
+        analysis_id: analysisId,
+        summary: `Predicted Stage: ${mlResult.predicted_stage || 'NORMAL'}`,
+        insights: mlResult.explanation || [],
+        feature_importance: {},
+      });
+    }
+
+    const completedRecord = await markAnalysisCompleted(analysisId);
+    return mapAnalysisRow(completedRecord);
+  } catch (err: any) {
+    logger.error(`[Analysis Pipeline] Execution failed for analysis ${analysisId}:`, err);
+    await markAnalysisFailed(analysisId);
+    throw err;
+  }
+};
+
+// Helper status update functions for external ML pipeline integration
 export const markAnalysisProcessing = async (analysisId: string) => {
   const now = new Date().toISOString();
   const updatePayload: any = { status: ANALYSIS_STATUS.PROCESSING, updated_at: now };
