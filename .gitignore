@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Environment Variables & Secrets (CRITICAL: Never commit secrets)
+.env
+.env.local
+.env.*.local
+*.env
+
+# Build & Output
+dist/
+build/
+
+# Operating System & Logs
+.DS_Store
+*.log
+
+# Scratch & Temporary
+scratch/
