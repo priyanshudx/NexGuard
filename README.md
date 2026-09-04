@@ -86,21 +86,41 @@ All REST API endpoints are served under `/api/v1`:
   - `GET /api/v1/analyses/:id/forecast` (Retrieve time-series forecast steps)
   - `GET /api/v1/analyses/:id/explanation` (Retrieve anomaly insights summary)
 
-See [`backend/docs/api.md`](file:///Users/priyanshukashyap/Desktop/SIH%202026/backend/docs/api.md) for full API specifications.
+See [`backend/docs/api.md`](backend/docs/api.md) for full API specifications.
 
 ---
 
-## 5. Production Deployment Guide
+## 5. Testing & Verification
+
+Run automated tests from the `backend/` directory:
+
+```bash
+# Run complete integration test suite (18 test scenarios)
+npm test
+
+# Run smoke test against the live FastAPI ML service (at ML_SERVICE_URL)
+npm run test:integration
+
+# Run all test suites
+npm run test:all
+```
+
+For complete testing architecture, mocking strategies, and demo reliability guidelines, see:
+👉 **[`backend/docs/testing.md`](backend/docs/testing.md)**
+
+---
+
+## 6. Production Deployment Guide
 
 For complete production cloud deployment instructions (Vercel, Render, Railway, Fly.io, Supabase, and FastAPI ML Service Integration), see the detailed deployment documentation:
 
-👉 **[`backend/docs/deployment.md`](file:///Users/priyanshukashyap/Desktop/SIH%202026/backend/docs/deployment.md)**
+👉 **[`backend/docs/deployment.md`](backend/docs/deployment.md)**
 
 ---
 
-## 6. Offline Demonstration & SIH Competition Architecture
+## 7. Offline Demonstration & SIH Competition Architecture
 
 For offline or air-gapped SIH competition environments:
-1. **Database Boundary**: Supabase access is strictly encapsulated within [`backend/src/lib/supabase.ts`](file:///Users/priyanshukashyap/Desktop/SIH%202026/backend/src/lib/supabase.ts).
-2. **ML Boundary**: Communication with the FastAPI ML model is strictly encapsulated within [`backend/src/lib/ml-client.ts`](file:///Users/priyanshukashyap/Desktop/SIH%202026/backend/src/lib/ml-client.ts) via configurable `ML_SERVICE_URL`.
+1. **Database Boundary**: Supabase access is strictly encapsulated within [`backend/src/lib/supabase.ts`](backend/src/lib/supabase.ts).
+2. **ML Boundary**: Communication with the FastAPI ML model is strictly encapsulated within [`backend/src/lib/ml-client.ts`](backend/src/lib/ml-client.ts) via configurable `ML_SERVICE_URL`.
 3. If the ML service is offline or unreachable, the backend API continues to operate independently and marks failed analysis attempts gracefully as `FAILED`.
