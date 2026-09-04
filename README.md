@@ -90,7 +90,15 @@ See [`backend/docs/api.md`](file:///Users/priyanshukashyap/Desktop/SIH%202026/ba
 
 ---
 
-## 5. Offline Demonstration & SIH Competition Architecture
+## 5. Production Deployment Guide
+
+For complete production cloud deployment instructions (Vercel, Render, Railway, Fly.io, Supabase, and FastAPI ML Service Integration), see the detailed deployment documentation:
+
+👉 **[`backend/docs/deployment.md`](file:///Users/priyanshukashyap/Desktop/SIH%202026/backend/docs/deployment.md)**
+
+---
+
+## 6. Offline Demonstration & SIH Competition Architecture
 
 For offline or air-gapped SIH competition environments:
 1. **Database Boundary**: Supabase access is strictly encapsulated within [`backend/src/lib/supabase.ts`](file:///Users/priyanshukashyap/Desktop/SIH%202026/backend/src/lib/supabase.ts).
